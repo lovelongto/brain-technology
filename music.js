@@ -1,4 +1,3 @@
-
 /**
  * 本地音乐播放器核心逻辑
  * 功能：文件读取、AudioContext解码、Web Audio API可视化、播放控制
@@ -9,6 +8,7 @@ class MusicPlayer {
         this.fileInput = document.getElementById('file-input');
         this.playlistContainer = document.getElementById('playlist-container');
         this.mobilePlaylistContent = document.getElementById('mobile-playlist-content');
+        this.searchInput = document.getElementById('search-input');
         this.playBtn = document.getElementById('play-btn');
         this.prevBtn = document.getElementById('prev-btn');
         this.nextBtn = document.getElementById('next-btn');
@@ -63,6 +63,17 @@ class MusicPlayer {
         }
     }
 
+    getFilteredPlaylist() {
+        const keyword = (this.searchInput ? this.searchInput.value.trim().toLowerCase() : '');
+        if (!keyword) return this.playlist;
+
+        return this.playlist.filter((track) => {
+            const name = (track.name || '').toLowerCase();
+            const fileName = (track.file ? track.file.name : (track.url || '')).toLowerCase();
+            return name.includes(keyword) || fileName.includes(keyword);
+        });
+    }
+
     // 从服务器上列出的目录抓取 musics 下的音频文件并加入播放列表
     async loadMusicsFromFolder() {
         try {
@@ -114,6 +125,9 @@ class MusicPlayer {
         // 文件选择
         this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
 
+        // 搜索音乐
+        this.searchInput.addEventListener('input', () => this.handleSearch());
+
         // 播放控制
         this.playBtn.addEventListener('click', () => this.togglePlay());
         this.prevBtn.addEventListener('click', () => this.playPrev());
@@ -148,6 +162,10 @@ class MusicPlayer {
                 this.seek(this.seekSlider.value * 1 - 5);
             }
         });
+    }
+
+    handleSearch() {
+        this.renderPlaylist();
     }
 
     initVisualizer() {
@@ -211,20 +229,22 @@ class MusicPlayer {
     }
 
     renderPlaylist() {
-        const createItem = (track, index) => {
+        const filteredTracks = this.getFilteredPlaylist();
+
+        const createItem = (track, actualIndex) => {
             const div = document.createElement('div');
-            div.className = `group flex items-center justify-between p-3 rounded-lg cursor-pointer transition hover:bg-gray-700/50 ${index === this.currentIndex ? 'bg-purple-600/20 border border-purple-500/30' : 'border border-transparent'}`;
+            div.className = `group flex items-center justify-between p-3 rounded-lg cursor-pointer transition hover:bg-gray-700/50 ${actualIndex === this.currentIndex ? 'bg-purple-600/20 border border-purple-500/30' : 'border border-transparent'}`;
             div.innerHTML = `
                 <div class="flex items-center gap-3 overflow-hidden">
-                    <span class="text-gray-500 text-xs w-4">${index + 1}</span>
+                    <span class="text-gray-500 text-xs w-4">${actualIndex + 1}</span>
                     <div class="flex flex-col overflow-hidden">
                         <span class="text-sm font-medium text-gray-200 truncate group-hover:text-white">${track.name}</span>
-                        <span class="text-xs text-gray-500">本地文件</span>
+                        <span class="text-xs text-gray-500">${track.file ? '本地文件' : '在线资源'}</span>
                     </div>
                 </div>
-                ${index === this.currentIndex && this.isPlaying ? '<i class="fa-solid fa-chart-simple text-purple-400 animate-pulse">' : ''}
+                ${actualIndex === this.currentIndex && this.isPlaying ? '<i class="fa-solid fa-chart-simple text-purple-400 animate-pulse"></i>' : ''}
             `;
-            div.addEventListener('click', () => this.loadTrack(index));
+            div.addEventListener('click', () => this.loadTrack(actualIndex));
             return div;
         };
 
@@ -240,9 +260,23 @@ class MusicPlayer {
             return;
         }
 
-        this.playlist.forEach((track, index) => {
-            this.playlistContainer.appendChild(createItem(track, index));
-            this.mobilePlaylistContent.appendChild(createItem(track, index));
+        if (filteredTracks.length === 0) {
+            const emptyMessage = `
+                <div class="text-center text-gray-500 mt-10 text-sm">
+                    <i class="fa-solid fa-magnifying-glass text-3xl mb-2 opacity-50"></i>
+                    <p>没有找到“${this.searchInput.value.trim()}”相关音乐</p>
+                </div>
+            `;
+            this.playlistContainer.innerHTML = emptyMessage;
+            this.mobilePlaylistContent.innerHTML = emptyMessage;
+            return;
+        }
+
+        filteredTracks.forEach((track, index) => {
+            const actualIndex = this.playlist.indexOf(track);
+            const item = createItem(track, actualIndex);
+            this.playlistContainer.appendChild(item);
+            this.mobilePlaylistContent.appendChild(item.cloneNode(true));
         });
     }
 
