@@ -6,9 +6,11 @@ class MusicPlayer {
     constructor() {
         // DOM 元素
         this.fileInput = document.getElementById('file-input');
+        this.mobileFileInput = document.getElementById('mobile-file-input');
         this.playlistContainer = document.getElementById('playlist-container');
         this.mobilePlaylistContent = document.getElementById('mobile-playlist-content');
         this.searchInput = document.getElementById('search-input');
+        this.mobileSearchInput = document.getElementById('mobile-search-input');
         this.playBtn = document.getElementById('play-btn');
         this.prevBtn = document.getElementById('prev-btn');
         this.nextBtn = document.getElementById('next-btn');
@@ -65,12 +67,14 @@ class MusicPlayer {
 
     getFilteredPlaylist() {
         const keyword = (this.searchInput ? this.searchInput.value.trim().toLowerCase() : '');
-        if (!keyword) return this.playlist;
+        const mobileKeyword = (this.mobileSearchInput ? this.mobileSearchInput.value.trim().toLowerCase() : '');
+        const finalKeyword = keyword || mobileKeyword;
+        if (!finalKeyword) return this.playlist;
 
         return this.playlist.filter((track) => {
             const name = (track.name || '').toLowerCase();
             const fileName = (track.file ? track.file.name : (track.url || '')).toLowerCase();
-            return name.includes(keyword) || fileName.includes(keyword);
+            return name.includes(finalKeyword) || fileName.includes(finalKeyword);
         });
     }
 
@@ -123,10 +127,24 @@ class MusicPlayer {
         console.log("初始化");
 
         // 文件选择
-        this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+        if (this.fileInput) this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+        if (this.mobileFileInput) this.mobileFileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
 
         // 搜索音乐
-        this.searchInput.addEventListener('input', () => this.handleSearch());
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                if (this.mobileSearchInput) this.mobileSearchInput.value = value;
+                this.handleSearch();
+            });
+        }
+        if (this.mobileSearchInput) {
+            this.mobileSearchInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                if (this.searchInput) this.searchInput.value = value;
+                this.handleSearch();
+            });
+        }
 
         // 播放控制
         this.playBtn.addEventListener('click', () => this.togglePlay());
@@ -165,6 +183,9 @@ class MusicPlayer {
     }
 
     handleSearch() {
+        const keyword = (this.searchInput && this.searchInput.value.trim()) || (this.mobileSearchInput && this.mobileSearchInput.value.trim()) || '';
+        if (this.searchInput) this.searchInput.value = keyword;
+        if (this.mobileSearchInput) this.mobileSearchInput.value = keyword;
         this.renderPlaylist();
     }
 
@@ -275,8 +296,9 @@ class MusicPlayer {
         filteredTracks.forEach((track, index) => {
             const actualIndex = this.playlist.indexOf(track);
             const item = createItem(track, actualIndex);
+            const item2 = createItem(track, actualIndex);
             this.playlistContainer.appendChild(item);
-            this.mobilePlaylistContent.appendChild(item.cloneNode(true));
+            this.mobilePlaylistContent.appendChild(item2);
         });
     }
 
