@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="index.css">
+  <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+  <link rel="stylesheet" href="font-awesome.all.min.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
+  <title>Music freedom</title>
+</head>
+
+<body>
+  <div class="nav">
+    <div class="logo">Music Freedom</div>
+    <button class="btn">Login</button>
+  </div>
+  <div class="container">
+    <main>
+      <div class="canvas-container">
+        <canvas id="visualizer-canvas"></canvas>
+      </div>
+      <div class="song-info">
+        <img id="song-cover" class="spin-animation animation-paused" src="https://picsum.photos/400/400?random=1"
+          alt="Song Cover">
+        <h2 id="song-title">Song Title</h2>
+        <p id="song-artist">Artist Name</p>
+      </div>
+    </main>
+    <footer>
+      <div class="progress-bar">
+        <span id="current-time">00:00</span>
+        <div class="progress">
+          <div class="progress-filled">
+            <div class="progress-handle"></div>
+          </div>
+          <input type="range" id="seek-slider" class="progress-range" min="0" max="100" value="0">
+        </div>
+        <span id="total-time">00:00</span>
+      </div>
+
+      <!-- 控制按钮 -->
+      <div class="v-ctrl">
+        <!-- 左侧：音量 -->
+        <div class="slider">
+          <button id="mute-btn">
+            <i class="fa-solid fa-volume-high"></i>
+          </button>
+          <div class="range-slider">
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8" class="input">
+          </div>
+        </div>
+
+        <!-- 中间：播放控制 -->
+        <div class="player-ctrl">
+          <button id="prev-btn">
+            <i class="fa-solid fa-backward-step text-xl"></i>
+          </button>
+          <button id="play-btn" style="z-index: 10;">
+            <i class="fa-solid fa-play text-lg ml-1"></i>
+          </button>
+          <button style="margin-right: 3rem;" id="next-btn">
+            <i class="fa-solid fa-forward-step text-xl"></i>
+          </button>
+        </div>
+
+        <!-- 右侧：模式 -->
+        <div class="mode">
+          <button id="loop-btn" title="循环模式">
+            <i class="fa-solid fa-repeat"></i>
+          </button>
+          <button id="shuffle-btn" title="随机播放">
+            <i class="fa-solid fa-shuffle"></i>
+          </button>
+        </div>
+      </div>
+    </footer>
+    <h1>Welcome to Music Freedom</h1>
+    <p>Discover and enjoy your favorite music without restrictions.</p>
+    <a href="music.html" class="btn">Explore Music</a>
+  </div>
+</body>
+<!-- <script src="index.js"></script> -->
+<script>
+  console.log('index.js loaded');
+  this.canvas = document.getElementById('visualizer-canvas');
+  this.songcover = document.getElementById('song-cover');
+  this.volSlider = document.getElementById('volume-slider');
+  this.mutebtn = document.getElementById('mute-btn');
+  this.canvasCtx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  this.rect = canvas.getBoundingClientRect();
+  //   this.rect.width = window.innerWidth;
+  // this.rect.height = window.innerHeight;
+  canvas.width = this.rect.width * dpr;
+  canvas.height = this.rect.height * dpr;
+  this.canvasCtx.scale(dpr, dpr);
+  this.AnalyserNode = null;
+  this.GainNode = null;
+  console.log(33);
+
+  this.source = null;
+  this.isPlaying = false;
+  const playBtn = document.getElementById('play-btn');
+
+  this.volSlider.addEventListener('input',(e) => this.setVolume(e.target.value));
+  this.mutebtn.addEventListener('click',()=> this.toggleMute());
+  function toggleMute(){
+    if(this.volSlider.value > 0 && this.GainNode){
+      this.GainNode.gain.value = 0;
+      this.volSlider.value =0;
+      this.source.value =0;
+      setVolume(this.GainNode.gain.value);
+    }else if(!this.GainNode&&this.volSlider.value > 0 ){
+      this.volSlider.value =0;
+      setVolume(0);
+    }else{
+      this.GainNode.gain.value = 0.1;
+      this.volSlider.value = 0.1;
+      setVolume(this.GainNode.gain.value);
+    }
+  }
+  function setVolume(val){
+    if(this.GainNode){
+      console.log('val',val,this.GainNode.gain.value);   
+      this.GainNode.gain.value = val;
+      this.volSlider.value = val;
+    }
+    const icon = this.mutebtn.querySelector('i');
+        if (val == 0) {
+            icon.className = 'fa-solid fa-volume-xmark';
+        } else if (val < 0.5) {
+            icon.className = 'fa-solid fa-volume-low';
+        } else {
+            icon.className = 'fa-solid fa-volume-high';
+        }
+  }
+
+  playBtn.addEventListener('click', async () => {
+    console.log(44);
+
+    playBtn.textContent = 'Loading...';
+    playBtn.disabled = true;
+
+    if (isPlaying && this.source) {
+      this.source.stop();
+      this.isPlaying = false;
+      playBtn.textContent = 'Play';
+      playBtn.disabled = false;
+      this.songcover.classList.add('animation-paused');
+      return;
+    }
+
+    try {
+      console.log(1);
+      // 创建音频上下文
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      await audioCtx.resume();
+      // 对含中文和空格的文件名进行编码
+      // const resp = await fetch(encodeURI('虎二 - 一百万个可能 (Live片段).mp3'));
+      const resp = await fetch(encodeURI('./musics/阳山伟伟 - The end point.mp3'));
+      const arrayBuffer = await resp.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+      this.source = audioCtx.createBufferSource();
+      this.AnalyserNode = audioCtx.createAnalyser();
+      this.GainNode = audioCtx.createGain();
+      this.AnalyserNode.fftSize = 512;
+      this.GainNode.connect(this.AnalyserNode);
+      this.AnalyserNode.connect(audioCtx.destination);
+
+
+      const ctx = this.canvasCtx;
+      const width = this.rect.width;
+      const height = this.rect.height;
+
+
+      
+      console.log(1, width, height);
+
+      const draw = () => {
+        const bufferlength = this.AnalyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferlength);
+        requestAnimationFrame(draw);
+        this.AnalyserNode.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, width, height);
+        // ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+        // ctx.fillRect(0, 0, width, height);
+        console.log(66);
+
+        const barWidth = (width / bufferlength) * 2.5;
+        let barHeight;
+        let x = 0;
+        for (let i = 0; i < bufferlength; i++) {
+          barHeight = dataArray[i];
+          const r = barHeight + (25 * (i / bufferlength));
+          const g = 250 * (i / bufferlength);
+          const b = 100;
+          const a = 1 || ((Math.floor(Math.random() * 9) + 1) / 10);
+          
+          // 渐变色
+          // const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
+          // gradient.addColorStop(0, '#a855f7'); // purple-500
+          // gradient.addColorStop(1, '#ec4899'); // pink-500
+          // document.documentElement.style.setProperty('--bg-color',`rgba(${r},${g},${b},0.5)`);
+
+          ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+
+          // ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.fillRect(x, height/1 - barHeight/2 , barWidth, barHeight);
+          ctx.fillRect(x, height - barHeight*5, barWidth + 1, barHeight/100);
+          // ctx.roundRect(x*2, height/2 - barHeight/2 , barWidth, barHeight);
+          x += barWidth + 1;
+        }
+      };
+
+      this.source.buffer = audioBuffer;
+      this.source.connect(this.GainNode);
+      this.GainNode.gain.value = this.volSlider.value;
+      console.log('1111',this.volSlider.value,this.GainNode.gain.value);
+      
+      this.canvas.style.zIndex = -1;
+      this.source.start(0);
+      this.songcover.classList.remove('animation-paused');
+    
+      draw();
+
+      this.isPlaying = true;
+      playBtn.textContent = 'Playing';
+    } catch (err) {
+      console.error('加载或解码音频失败', err);
+      playBtn.textContent = 'Play failed';
+      playBtn.disabled = false;
+    } finally {
+      playBtn.disabled = false;
+    }
+
+  })
+</script>
+
+</html>

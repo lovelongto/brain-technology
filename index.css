@@ -1,0 +1,259 @@
+/* html{
+  background-color: red;
+} */
+ @keyframes spin {
+  from { transform: rotate(0deg);}
+  to { transform: rotate(360deg);}
+ }
+
+.spin-animation {
+  animation: spin 10s linear infinite;
+}
+
+.animation-paused {
+  animation-play-state: paused;
+}
+
+.canvas-container{
+  /* margin-bottom: 100rem; */
+}
+
+canvas {
+  inset: 0;
+  z-index: -1;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+}
+
+.song-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* margin-top: 1rem; */
+  img{
+    opacity: 0.8;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+.text-lg {
+  /* text-lg: 大字体 */
+  font-size: 1.125rem;
+  /* 默认基准下为 18px */
+  line-height: 1.75rem;
+  /* 默认行高为 28px (约 1.55) */
+}
+
+.ml-1 {
+  margin-left: 0.25rem;
+  /* 默认基准下为 4px */
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  /* 在根字体大小为 16px 时，等于 20px */
+  line-height: 1.75rem;
+  /* 等于 28px */
+}
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  /* text-xs: 极小字体 */
+  font-size: 0.75rem;
+  /* 默认基准下为 12px */
+  line-height: 1rem;
+  /* 默认行高为 16px (1.333...) */
+  /* font-mono: 等宽字体栈 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  .progress {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    height: 0.25rem;
+    cursor: pointer;
+
+    input {
+      z-index: 10;
+      width: 100%;
+      position: absolute;
+      height: 100%;
+      cursor: pointer;
+      margin: 0;
+      padding: 0;
+      opacity: 0.1;
+    }
+
+    .progress-filled {
+      position: absolute;
+      width: 100%;
+      border-radius: 999px;
+      height: 100%;
+      /* background-color: #3b82f6; */
+      overflow: hidden;
+      /* bg-gray-700: 设置背景色为深灰色 */
+      background-color: #374151;
+
+      /* 简化十六进制写法: #374151 */
+      .progress-handle {
+        height: 100%;
+        width: 0%;
+        /* --- 背景渐变相关 --- */
+
+        /* bg-gradient-to-r: 设置渐变方向为从左到右 */
+        background-image: linear-gradient(to right, var(--tw-gradient-stops));
+
+        /* from-purple-500: 设置渐变起始颜色 (紫色) */
+        --tw-gradient-from: #a855f7;
+        /* --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(168, 85, 247, 0)); */
+
+        /* to-pink-500: 设置渐变结束颜色 (粉色) */
+        --tw-gradient-to: #ec4899;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+
+        /* 最终解析后的背景图像大致为: */
+        /* background-image: linear-gradient(to right, #a855f7, #ec4899); */
+
+        /* --- 过渡动画相关 --- */
+
+        /* transition-all: 对所有可动画属性应用过渡效果 */
+        transition-property: all;
+
+        /* duration-100: 过渡持续时间为 100 毫秒 */
+        transition-duration: 100ms;
+
+        /* ease-linear: 线性速度曲线（匀速运动） */
+        transition-timing-function: linear;
+
+      }
+    }
+  }
+}
+
+.v-ctrl {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  justify-content: space-between;
+
+  @media (min-width:640px) {
+    button {
+      font-size: 1.5rem;
+    }
+  }
+
+  .slider {
+    width: 25%;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .range-slider {
+    width: 6rem;
+    display: none;
+
+    input {
+      width: 100%;
+      cursor: pointer;
+      /* h-1: 高度为 0.25rem (默认 16px 基准下为 4px) */
+      height: 0.25rem;
+
+      margin-bottom: 1rem;
+
+      /* bg-gray-700: 背景色为灰色系第700号色 */
+      background-color: #374151;
+
+      /* rounded-lg: 大圆角 (通常为 0.5rem / 8px) */
+      /* border-radius: 0.5rem; */
+
+      /* appearance-none: 移除浏览器默认的表单控件样式 */
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+  }
+
+  @media (min-width:640px) {
+    .range-slider {
+      display: block;
+    }
+  }
+
+  .player-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    width: 50%;
+  }
+
+  .mode {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 25%;
+    justify-content: flex-end;
+  }
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #333;
+  color: var(--color-text);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+
+  .logo {
+    /* color:white; */
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+}
+
+button,
+.btn {
+  border-radius: 5%;
+  background-color: transparent;
+  border: none;
+  background-color: var(--color-tint);
+  color: rgb(224, 223, 223);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  /* 来自 transition */
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+button:hover,
+.btn:hover {
+  /* 80% 主色 + 20% 白色，实现轻微的提亮/褪色效果 */
+  color: color-mix(in srgb, var(--color-high-text) 80%, white 20%);
+  ;
+  transform: scale(1.1);
+
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  margin-top: 5rem;
+}

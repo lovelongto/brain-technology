@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music freedom - 本地播放器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
+     <link rel="stylesheet" href="font-awesome.all.min.css">
+    <style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+        
+        /* 唱片旋转动画 */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 10s linear infinite;
+        }
+        .paused-animation {
+            animation-play-state: paused;
+        }
+
+        /* 范围滑块样式 */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -4px; 
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #4b5563;
+            border-radius: 2px;
+        }
+        
+        /* 玻璃拟态效果 */
+        .glass-panel {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-screen flex overflow-hidden font-sans selection:bg-purple-500 selection:text-white">
+
+    <!-- 侧边栏：播放列表 -->
+    <aside class="w-80 bg-gray-800 flex flex-col border-r border-gray-700 hidden md:flex z-10 shadow-xl">
+        <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+            <h2 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
+                <i class="fa-solid fa-music mr-2"></i>播放列表
+            </h2>
+            <span id="track-count" class="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">0 首</span>
+        </div>
+        
+        <!-- 文件上传按钮 -->
+        <div class="p-4">
+            <label class="flex items-center justify-center w-full h-12 px-4 transition bg-gray-700 border-2 border-gray-600 border-dashed rounded-lg appearance-none cursor-pointer hover:border-purple-500 hover:bg-gray-600 focus:outline-none group">
+                <span class="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-400 group-hover:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span class="font-medium text-gray-400 group-hover:text-white">添加本地音乐</span>
+                </span>
+                <input type="file" id="file-input" class="hidden" accept="audio/*" multiple />
+            </label>
+        </div>
+
+        <!-- 列表容器 -->
+        <div id="playlist-container" class="flex-1 overflow-y-auto p-2 space-y-1">
+            <!-- 动态生成列表项 -->
+            <div class="text-center text-gray-500 mt-10 text-sm">
+                <i class="fa-regular fa-folder-open text-4xl mb-2 opacity-50"></i>
+                <p>暂无音乐，请点击上方按钮添加</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区：可视化与封面 -->
+    <main class="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <!-- 顶部导航/标题 -->
+        <header class="h-16 flex items-center justify-between px-8 border-b border-gray-800/50 glass-panel z-20">
+            <div class="flex items-center gap-4">
+                <button id="mobile-menu-btn" class="md:hidden text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h1 class="text-lg font-semibold tracking-wide text-gray-200">Now Playing</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" class="text-gray-400 hover:text-purple-400 transition">
+                    <i class="fa-solid fa-palette"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 可视化区域 -->
+        <div class="flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+            <!-- 背景光晕 -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+            
+            <!-- 唱片封面 -->
+            <div class="relative w-64 h-64 md:w-80 md:h-80 mb-8 group">
+                <div id="album-art" class="w-full h-full rounded-full bg-gray-800 border-4 border-gray-700 shadow-2xl flex items-center justify-center overflow-hidden paused-animation spin-animation relative z-10">
+                    <img id="cover-img" src="https://picsum.photos/400/400?random=1" alt="专辑封面" class="w-full h-full object-cover opacity-80">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-16 h-16 bg-gray-900 rounded-full border-2 border-gray-600 flex items-center justify-center">
+                            <div class="w-4 h-4 bg-gray-400 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 阴影效果 -->
+                <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-40 h-4 bg-black/50 blur-xl rounded-full"></div>
+            </div>
+
+            <!-- 歌曲信息 -->
+            <div class="text-center z-10 max-w-lg w-full">
+                <h2 id="current-title" class="text-2xl md:text-3xl font-bold text-white mb-2 truncate drop-shadow-md">未播放</h2>
+                <p id="current-artist" class="text-purple-400 text-lg mb-6 truncate">请选择音乐文件</p>
+                
+                <!-- 音频可视化 Canvas -->
+                <canvas id="visualizer" class="w-full h-24 rounded-lg bg-gray-800/30 backdrop-blur-sm border border-gray-700/50"></canvas>
+            </div>
+        </div>
+
+        <!-- 底部控制栏 -->
+        <footer class="h-24 bg-gray-900/90 backdrop-blur-md border-t border-gray-800 px-6 md:px-10 flex flex-col justify-center z-30 shadow-2xl">
+            <!-- 进度条 -->
+            <div class="w-full flex items-center gap-3 mb-2 text-xs text-gray-400 font-mono">
+                <span id="current-time">00:00</span>
+                <div class="flex-1 relative h-1 group cursor-pointer">
+                    <div class="absolute w-full h-full bg-gray-700 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-0 transition-all duration-100 ease-linear"></div>
+                    </div>
+                    <input type="range" id="seek-slider" min="0" max="100" value="0" class="absolute w-full h-full opacity-0 cursor-pointer z-10">
+                </div>
+                <span id="duration">00:00</span>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="flex items-center justify-between">
+                <!-- 左侧：音量 -->
+                <div class="flex items-center gap-3 w-1/4">
+                    <button id="mute-btn" class="text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <div class="w-24 hidden sm:block">
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- 中间：播放控制 -->
+                <div class="flex items-center gap-6 w-2/4 justify-center">
+                    <button id="prev-btn" class="text-gray-400 hover:text-white transition transform hover:scale-110">
+                        <i class="fa-solid fa-backward-step text-xl"></i>
+                    </button>
+                    <button id="play-btn" class="w-12 h-12 rounded-full bg-white text-gray-900 flex items-center justify-center hover:bg-purple-100 hover:scale-105 transition shadow-lg shadow-purple-500/20">
+                        <i class="fa-solid fa-play text-lg ml-1"></i>
+                    </button>
+                    <button id="next-btn" class="text-gray-400 hover:text-white transition transform hover:scale-110">
+                        <i class="fa-solid fa-forward-step text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- 右侧：模式 -->
+                <div class="flex items-center justify-end gap-4 w-1/4">
+                    <button id="loop-btn" class="text-gray-400 hover:text-purple-400 transition" title="循环模式">
+                        <i class="fa-solid fa-repeat"></i>
+                    </button>
+                    <button id="shuffle-btn" class="text-gray-400 hover:text-purple-400 transition" title="随机播放">
+                        <i class="fa-solid fa-shuffle"></i>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- 移动端播放列表面板 (默认隐藏) -->
+    <div id="mobile-playlist" class="fixed inset-0 bg-gray-900/95 z-50 transform translate-x-full transition-transform duration-300 md:hidden flex flex-col">
+        <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+            <h2 class="text-xl font-bold">播放列表</h2>
+            <button id="close-mobile-playlist" class="text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-2xl"></i>
+            </button>
+        </div>
+        <div id="mobile-playlist-content" class="flex-1 overflow-y-auto p-4 space-y-2">
+            <!-- 复制桌面端列表内容 -->
+        </div>
+    </div>
+
+    <script src="music.js"></script>
+</body>
+</html>
